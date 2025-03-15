@@ -1,52 +1,48 @@
-require('dotenv').config(); 
-const express = require('express');
-const axios = require('axios');
+require("dotenv").config();
+const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const GITHUB_API = 'https://api.github.com';
-const TOKEN = process.env.GITHUB_TOKEN;
+app.use(cors());
+app.use(express.json());
 
-app.use(express.json()); 
+const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
 
 
-app.get('/github/user', async (req, res) => {
-    try {
-        const response = await axios.get(`${GITHUB_API}/user`, {
-            headers: { Authorization: `token ${TOKEN}` }
-        });
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+
+app.get("/", (req, res) => {
+  res.json({ message: "MCP Twitter API Server Running!" });
 });
 
 
-app.get('/github/repos', async (req, res) => {
-    try {
-        const response = await axios.get(`${GITHUB_API}/user/repos`, {
-            headers: { Authorization: `token ${TOKEN}` }
-        });
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+app.get("/tweets", async (req, res) => {
+  await sleep(1000); 
+
+  const query = req.query.query || "AI"; 
+  const count = req.query.count || 1; 
+
+  try {
+    const response = await axios.get("https://api.twitter.com/2/tweets/search/recent", {
+      headers: {
+        Authorization: `Bearer ${BEARER_TOKEN}`,
+      },
+      params: {
+        query: query,
+        max_results: count,
+      },
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ error: error.response?.data || error.message });
+  }
 });
 
-app.post('/github/create-repo', async (req, res) => {
-    try {
-        const { name, description, privateRepo } = req.body;
-        const response = await axios.post(`${GITHUB_API}/user/repos`,
-            { name, description, private: privateRepo },
-            { headers: { Authorization: `token ${TOKEN}` } }
-        );
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
-
+const PORT = 5000;
 app.listen(PORT, () => {
-    console.log(`MCP GitHub Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on http://127.0.0.1:${PORT}`);
 });
